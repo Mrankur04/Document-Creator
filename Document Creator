@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Document Creator — Resume & PDF Builder</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:#f6f7fb}
+    .preview {background:#fff; padding:24px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.08);}
+    .template-compact h2{font-size:20px;margin-bottom:4px}
+    .template-modern h2{font-size:22px;color:#0d6efd}
+    .controls{max-height:80vh; overflow:auto}
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4">Document Creator — Resume & PDF Builder</h1>
+    <div>
+      <button id="exportPdf" class="btn btn-primary">Export to PDF</button>
+      <a id="downloadHtml" class="btn btn-outline-secondary" download="document.html">Download HTML</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4 controls">
+      <div class="card p-3 mb-3">
+        <h5>Template</h5>
+        <select id="template" class="form-select mb-2">
+          <option value="compact">Compact (Simple Resume)</option>
+          <option value="modern">Modern (Colored)</option>
+        </select>
+        <hr>
+        <h5>Basic Info</h5>
+        <div class="mb-2">
+          <input id="name" class="form-control" placeholder="Full name" />
+        </div>
+        <div class="mb-2">
+          <input id="title" class="form-control" placeholder="Title (e.g. Frontend Developer)" />
+        </div>
+        <div class="mb-2">
+          <input id="contact" class="form-control" placeholder="Contact / Email / Phone" />
+        </div>
+
+        <hr>
+        <h5>Summary</h5>
+        <textarea id="summary" class="form-control mb-2" rows="3" placeholder="Short summary / objective"></textarea>
+
+        <hr>
+        <h5>Experience (one per line: Company — Role — Years)</h5>
+        <textarea id="experience" class="form-control mb-2" rows="4" placeholder="Example: Google — Software Engineer — 2020-2024"></textarea>
+
+        <h5>Education (one per line)</h5>
+        <textarea id="education" class="form-control mb-2" rows="3" placeholder="College — Degree — Year"></textarea>
+
+        <h5>Skills (comma separated)</h5>
+        <input id="skills" class="form-control mb-2" placeholder="JavaScript, HTML, CSS, React" />
+
+        <div class="d-grid"><button id="update" class="btn btn-success">Update Preview</button></div>
+      </div>
+
+      <div class="card p-3">
+        <h6>Quick Actions</h6>
+        <p class="small text-muted">Use these to reset or sample</p>
+        <div class="d-flex gap-2">
+          <button id="sample" class="btn btn-outline-primary btn-sm">Load Sample</button>
+          <button id="reset" class="btn btn-outline-danger btn-sm">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div id="previewContainer" class="preview">
+        <!-- Preview will be injected here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- html2pdf bundle includes html2canvas and jsPDF. Good for client-side PDF export. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+
+<script>
+const previewContainer = document.getElementById('previewContainer');
+const updateBtn = document.getElementById('update');
+const exportPdfBtn = document.getElementById('exportPdf');
+const downloadHtml = document.getElementById('downloadHtml');
+
+function buildTemplate(data){
+  const {template, name, title, contact, summary, experience, education, skills} = data;
+  const expList = experience.split('\n').filter(Boolean).map(line=>{
+    const parts = line.split('—').map(s=>s.trim());
+    return `<div class=\"mb-2\"><strong>${parts[0]||''}</strong><div>${parts[1]||''} • ${parts[2]||''}</div></div>`;
+  }).join('');
+  const eduList = education.split('\n').filter(Boolean).map(line=>`<div class=\"mb-2\">${line}</div>`).join('');
+  const skillsHtml = skills.split(',').filter(Boolean).map(s=>`<span class=\"badge bg-secondary me-1\">${s.trim()}</span>`).join('');
+
+  if(template === 'compact'){
+    return `
+      <div class="template-compact">
+        <h2>${name||'Your Name'}</h2>
+        <div class="text-muted mb-2">${title||''} · ${contact||''}</div>
+        <hr>
+        <h5>Summary</h5>
+        <p>${summary||''}</p>
+        <h5>Experience</h5>
+        ${expList || '<div class="text-muted">No experience added</div>'}
+        <h5>Education</h5>
+        ${eduList || '<div class="text-muted">No education added</div>'}
+        <h5>Skills</h5>
+        <div>${skillsHtml}</div>
+      </div>
+    `;
+  }
+  // modern
+  return `
+    <div class="template-modern">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h2>${name||'Your Name'}</h2>
+          <div class="text-muted">${title||''}</div>
+        </div>
+        <div class="text-end text-muted">${contact||''}</div>
+      </div>
+      <hr>
+      <h5 style="color:#6c757d">Profile</h5>
+      <p>${summary||''}</p>
+      <div class="row">
+        <div class="col-md-7">
+          <h5>Experience</h5>
+          ${expList || '<div class="text-muted">No experience added</div>'}
+        </div>
+        <div class="col-md-5">
+          <h5>Skills</h5>
+          <div>${skillsHtml}</div>
+          <h5 class="mt-3">Education</h5>
+          ${eduList || '<div class="text-muted">No education added</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getFormData(){
+  return {
+    template: document.getElementById('template').value,
+    name: document.getElementById('name').value,
+    title: document.getElementById('title').value,
+    contact: document.getElementById('contact').value,
+    summary: document.getElementById('summary').value,
+    experience: document.getElementById('experience').value,
+    education: document.getElementById('education').value,
+    skills: document.getElementById('skills').value,
+  };
+}
+
+function updatePreview(){
+  const data = getFormData();
+  previewContainer.innerHTML = buildTemplate(data);
+  // prepare download HTML link
+  const fullHtml = `<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css\" rel=\"stylesheet\"></head><body class=\"p-4\">${buildTemplate(data)}</body></html>`;
+  const blob = new Blob([fullHtml], {type: 'text/html'});
+  downloadHtml.href = URL.createObjectURL(blob);
+}
+
+updateBtn.addEventListener('click', ()=>{
+  updatePreview();
+});
+
+// sample data
+document.getElementById('sample').addEventListener('click', ()=>{
+  document.getElementById('name').value = 'Aarav Sharma';
+  document.getElementById('title').value = 'Frontend Developer';
+  document.getElementById('contact').value = 'aarav@example.com · +91 99999 99999';
+  document.getElementById('summary').value = 'Frontend developer with 4+ years experience building responsive web apps.';
+  document.getElementById('experience').value = 'Google — Frontend Engineer — 2021-2024\nStartupX — Web Developer — 2019-2021';
+  document.getElementById('education').value = 'IIT Example — B.Tech — 2015-2019';
+  document.getElementById('skills').value = 'JavaScript, HTML, CSS, React, Bootstrap';
+  updatePreview();
+});
+
+// reset
+document.getElementById('reset').addEventListener('click', ()=>{
+  document.getElementById('name').value = '';
+  document.getElementById('title').value = '';
+  document.getElementById('contact').value = '';
+  document.getElementById('summary').value = '';
+  document.getElementById('experience').value = '';
+  document.getElementById('education').value = '';
+  document.getElementById('skills').value = '';
+  updatePreview();
+});
+
+// export to PDF
+exportPdfBtn.addEventListener('click', ()=>{
+  // increase scale for better PDF quality
+  const opt = {
+    margin: 0.4,
+    filename: (document.getElementById('name').value || 'document') + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+  html2pdf().set(opt).from(previewContainer).save();
+});
+
+// initial preview
+updatePreview();
+</script>
+</body>
+</html>
